@@ -132,11 +132,11 @@
                     "appSettings": [
                         {
                             "name": "FUNCTIONS_WORKER_RUNTIME",
-                            "value": "python"
+                            "value": "dotnet"
                         },
                         {
                             "name": "FUNCTIONS_EXTENSION_VERSION",
-                            "value": "~2"
+                            "value": "~4"
                         },
                         {
                             "name": "AzureWebJobsStorage",
@@ -154,10 +154,10 @@
             "name": "[variables('hostingPlanName')]",
             "location": "[parameters('location')]",
             "sku": {
-                "tier": "Standard",
-                "name": "S1"
+                "tier": "Dynamic",
+                "name": "Y1"
             },
-            "kind": "linux",
+            "kind": "functionapp",
             "properties": {
                 "reserved": true
             }
