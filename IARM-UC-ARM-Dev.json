@@ -1,0 +1,176 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "siteName": {
+            "defaultValue": "",
+            "type": "String",
+            "metadata": {
+                "description": "The unique name of you Web Site."
+            }
+        },
+        "storageAccountName": {
+            "defaultValue": "",
+            "type": "String",
+			"metadata": {
+                "description": "The unique name of your storage account."
+            }
+        },
+        "location": {
+            "defaultValue": "UK West",
+            "type": "String",
+			"allowedValues": [
+        "Asia",
+		"Asia Pacific",
+		"Australia",
+		"Australia Central",
+		"Australia Central 2",
+		"Australia East",
+		"Australia Southeast",
+		"Brazil",
+		"Brazil South",
+		"Brazil Southeast",
+		"Canada",
+		"Canada Central",
+		"Canada East",
+		"Central India",
+		"Central US",
+		"Central US EUAP",
+		"East Asia",
+		"East US",
+		"East US 2",
+		"East US 2 EUAP",
+		"East US STG",
+		"Europe",
+		"France",
+		"France Central",
+		"France South",
+		"Germany",
+		"Germany North",
+		"Germany West Central",
+		"Global",
+		"India",
+		"Japan",
+		"Japan East",
+		"Japan West",
+		"Jio India Central",
+		"Jio India West",
+		"Korea",
+		"Korea Central",
+		"Korea South",
+		"North Central US",
+		"North Europe",
+		"Norway",
+		"Norway East",
+		"Norway West",
+		"Qatar Central",
+		"Singapore",
+		"South Africa",
+		"South Africa North",
+		"South Africa West",
+		"South Central US",
+		"South Central US STG",
+		"South India",
+		"Southeast Asia",
+		"Sweden Central",
+		"Switzerland",
+		"Switzerland North",
+		"Switzerland West",
+		"UAE Central",
+		"UAE North",
+		"UK South",
+		"UK West",
+		"United Arab Emirates",
+		"United Kingdom",
+		"United States",
+		"United States EUAP",
+		"West Central US",
+		"West Europe",
+		"West India",
+		"West US",
+		"West US 2",
+		"West US 3"
+		],
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "storageAccountType": {
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Premium_LRS",
+                "Premium_ZRS",
+                "Standard_GRS",
+                "Standard_GZRS",
+                "Standard_LRS",
+                "Standard_RAGRS",
+                "Standard_RAGZRS",
+                "Standard_ZRS"
+            ],
+            "type": "String",
+            "metadata": {
+                "description": "Storage Account type"
+            }
+        }
+    },
+    "variables": {
+        "hostingPlanName": "[format('HPN-{0}', resourceGroup().name)]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2022-03-01",
+            "name": "[parameters('siteName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ],
+            "kind": "functionapp,linux",
+            "properties": {
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "FUNCTIONS_WORKER_RUNTIME",
+                            "value": "python"
+                        },
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~2"
+                        },
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1}', parameters('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-09-01').keys[0].value)]"
+                        }
+                    ]
+                },
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+                "clientAffinityEnabled": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2022-03-01",
+            "name": "[variables('hostingPlanName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "tier": "Standard",
+                "name": "S1"
+            },
+            "kind": "linux",
+            "properties": {
+                "reserved": true
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2022-09-01",
+            "name": "[parameters('storageAccountName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "[parameters('storageAccountType')]"
+            },
+            "kind": "StorageV2"
+        }
+    ]
+}
