@@ -1,0 +1,131 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "functionAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Azure Function App."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Azure Storage Account."
+      }
+    },
+    "keyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Azure Key Vault."
+      }
+    },
+    "automationAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Azure Automation Account."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-04-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2021-06-01-preview",
+      "name": "[parameters('keyVaultName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [],
+        "sku": {
+          "name": "standard"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts",
+      "apiVersion": "2015-10-31",
+      "name": "[parameters('automationAccountName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "sku": {
+          "name": "Basic"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2018-11-01",
+      "name": "[parameters('functionAppName')]",
+      "location": "[resourceGroup().location]",
+      "kind": "functionapp",
+      "properties": {
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-04-01').keys[0].value)]"
+            },
+            {
+              "name": "AzureWebJobsDashboard",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-04-01').keys[0].value)]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~3"
+            }
+          ]
+        }
+      },
+      "resources": [
+        {
+          "type": "Microsoft.Storage/storageAccounts/functions",
+          "apiVersion": "2021-02-01",
+          "name": "[concat(parameters('storageAccountName'), '/default/', parameters('functionAppName'))]",
+          "dependsOn": ["[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ],
+      "properties": {
+        "functionAppId": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2018-11-01",
+      "name": "[concat(parameters('functionAppName'), '/appsettings')]",
+      "dependsOn": [        "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"      ],
+      "properties": {
+        "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-04-01').keys[0].value)]",
+        "WEBSITE_CONTENTSHARE": "[toLower(parameters('functionAppName'))]",
+        "WEBSITE_NODE_DEFAULT_VERSION": "14.16.0",
+        "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-04-01').keys[0].value)]",
+        "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-04-01').keys[0].value)]",
+        "FUNCTIONS_EXTENSION_VERSION": "~3",
+        "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('Microsoft.Insights/components/', concat(parameters('functionAppName'), '-insights')), '2015-05-01').InstrumentationKey]",
+        "ApplicationInsightsAgent_EXTENSION_VERSION": "~3"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2018-11-01",
+      "name": "[concat(parameters('functionAppName'), '/connectionstrings')]",
+      "dependsOn": [        "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"      ],
+      "properties": {
+        "StorageAccountConnectionString": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-04-01').keys[0].value)]",
+        "KeyVaultUrl": "[reference(concat('Microsoft.KeyVault/vaults/', parameters('keyVaultName')), '2019-09-01').vaultUri]",
+        "AutomationAccountName": "[parameters('automationAccountName')]"
+      }
+    }
+  ]
+}
+]
+}
